@@ -103,7 +103,8 @@ def parse_arguments():
 
 
 
-def main(args):
+def main():
+    args = parse_arguments()
     file_paths = {
         'sample' : args.sample_path,
         'background' : args.background_path
@@ -115,4 +116,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(parse_arguments())
+    main()
