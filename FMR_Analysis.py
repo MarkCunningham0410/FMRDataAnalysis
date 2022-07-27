@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py as h5
+import argparse, os
 
 
 
@@ -65,6 +66,8 @@ def contour_plot(current, frequency, amplitude, maximum_y = 9):
     plt.ylim(ymin = 2, ymax=maximum_y)
     plt.xlim(xmin = -2, xmax = 1.5)
 
+    plt.savefig('saved_plots/Testing_plot.png', transparent=False)
+
 
 def background_separation(sample_amplitude, background_amplitude):
     """
@@ -73,7 +76,7 @@ def background_separation(sample_amplitude, background_amplitude):
     return 20 * np.log((sample_amplitude * background_amplitude) / (sample_amplitude[0] * background_amplitude[0]))
 
 
-def main(*filenames, background_removal= False):
+def functionality(*filenames, background_removal = False):
     h5_files = read_and_scan(*filenames)
 
     sample = current_frequency_amplitude(h5_files[0])
@@ -90,12 +93,26 @@ def main(*filenames, background_removal= False):
     return
 
 
-
-if __name__ == '__main__':
+def parse_arguments():
+    parser = argparse.ArgumentParser(description = 'Run FMR Data Analysis')
+    parser.add_argument('-sample_path', metavar='sample_path', type = str, help = 'The path to sample .h5 file')
+    parser.add_argument('-background_path', metavar='background_path', type = str, help = 'The path to background .h5 file', default='sample_files/no_sample.h5')
+    parser.add_argument('-background_removal', action='store_true', help = 'Toggles removal of background amplitudes')
     
+    return parser.parse_args()
+
+
+
+def main(args):
     file_paths = {
-        'sample' : 'sample_files/yig sphere 3-15GHz -4.1 to 4.1A.h5',
-        'background' : '3 to 15GHz, -4.1A to 4.1A, sample face up.h5'
+        'sample' : args.sample_path,
+        'background' : args.background_path
     }
 
-    main(*file_paths.values())
+    print(file_paths.values())
+    functionality(*file_paths.values()) #args.background_removal)
+
+
+
+if __name__ == '__main__':
+    main(parse_arguments())
