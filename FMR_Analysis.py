@@ -86,5 +86,16 @@ def main(*filenames, background_removal= False):
     
     else:
         contour_plot(current,frequency, 20*np.log10(sample['amplitude']))
-        
+
     return
+
+
+
+if __name__ == '__main__':
+    
+    file_paths = {
+        'sample' : 'sample_files/yig sphere 3-15GHz -4.1 to 4.1A.h5',
+        'background' : '3 to 15GHz, -4.1A to 4.1A, sample face up.h5'
+    }
+
+    main(*file_paths.values())
