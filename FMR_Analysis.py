@@ -1,8 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py as h5
-import argparse, os
+import argparse
+import pandas as pd
+from sklearn.preprocessing import normalize
 
+
+
+def normalise_array(data):
+    data_normed = data / data.max(axis=0)
+
+    return data_normed
 
 
 def scan_hdf5(path, recursive=True, tab_step=2):
@@ -24,7 +32,6 @@ def read_and_scan(*filenames):
     """
     Takes path to multiple .h5 files and returns h5 datasets as list
     """
-    #scan_hdf5(filename)
     h5_files = [h5.File(filename) for filename in filenames]
     return h5_files
 
@@ -36,7 +43,7 @@ def current_frequency_amplitude(h5_block):
     frame = {
         'current' : np.asarray(h5_block['entry']['data0']['current']),
         'frequency' : np.asarray(h5_block['entry']['data0']['frequency']),
-        'amplitude' : np.asarray(h5_block['entry']['data0']['amplitude'])
+        'amplitude' : 20*np.log10(np.asarray(h5_block['entry']['data0']['amplitude']).T)
     }
     
     return frame
@@ -50,21 +57,22 @@ def current_frequency_mesh(current_axes,frequency_axes):
     return current_mesh, frequency_mesh
 
 
-def contour_plot(current, frequency, amplitude, maximum_y = 9):
+def contour_plot(current, frequency, amplitude, maximum_y = 8):
     """
     Returns contour plot of Frequency, Current and Amplitude
     """
     params = {'mathtext.default': 'regular' }          
     plt.rcParams.update(params)
+    current_mesh, frequency_mesh = current_frequency_mesh(current, frequency)
 
-    plt.contourf(current,frequency/1e9, amplitude.T, 1000, cmap = plt.get_cmap('magma_r'))
+    plt.pcolormesh(current_mesh,frequency_mesh/1e9, amplitude, vmin=-25, vmax=-10)
 
-    cbar = plt.colorbar( format = '%.1f')
+    cbar = plt.colorbar()
     cbar.set_label("$S_{11}$ (Normalised Amplitude)")
     plt.xlabel('Current /A')
     plt.ylabel('Frequency /GHz')
-    plt.ylim(ymin = 2, ymax=maximum_y)
-    plt.xlim(xmin = -2, xmax = 1.5)
+    plt.ylim(ymax=maximum_y)
+    plt.xlim()
 
     plt.savefig('saved_plots/Testing_plot.png', transparent=False)
 
@@ -73,23 +81,24 @@ def background_separation(sample_amplitude, background_amplitude):
     """
     Converts signal to decibels after removing background noise.
     """
-    return 20 * np.log((sample_amplitude * background_amplitude) / (sample_amplitude[0] * background_amplitude[0]))
+    return ((sample_amplitude * background_amplitude) / (sample_amplitude[0] * background_amplitude[0]))
 
 
 def functionality(*filenames, background_removal = False):
     h5_files = read_and_scan(*filenames)
-
     sample = current_frequency_amplitude(h5_files[0])
-    background = current_frequency_amplitude(h5_files[1])
-    current, frequency = current_frequency_mesh(sample['current'], sample['frequency'])
+    current, frequency, sample_amplitude = sample['current'], sample['frequency'], sample['amplitude']
+
+    background_amplitude = current_frequency_amplitude(h5_files[1])['amplitude']
 
     if background_removal:
-        foreground_amplitude = background_separation(sample['amplitude'], background['amplitude'])
-        contour_plot(current, frequency, foreground_amplitude)
+        foreground_amplitude = background_separation(sample_amplitude, background_amplitude)
+        contour_plot(current, frequency, normalise_array(foreground_amplitude))
     
     else:
-        contour_plot(current,frequency, 20*np.log10(sample['amplitude']))
-
+        normalised_amplitude = normalise_array(sample_amplitude)
+        contour_plot(current,frequency, normalised_amplitude)
+        
     return
 
 
@@ -109,8 +118,6 @@ def main():
         'sample' : args.sample_path,
         'background' : args.background_path
     }
-
-    print(file_paths.values())
     functionality(*file_paths.values()) #args.background_removal)
 
 
