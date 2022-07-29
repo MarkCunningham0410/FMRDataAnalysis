@@ -2,15 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import h5py as h5
 import argparse
-import pandas as pd
-from sklearn.preprocessing import normalize
 
 
 
-def normalise_array(data):
-    data_normed = data / data.max(axis=0)
-
-    return data_normed
+def normalise_array(amplitude):
+    """
+    Normalises amplitude array relative to the start of each row
+    """
+    normalised_amplitude = 20*np.log10(amplitude/amplitude[:,0].reshape(-1,1))
+    return normalised_amplitude
 
 
 def scan_hdf5(path, recursive=True, tab_step=2):
@@ -32,7 +32,7 @@ def read_and_scan(*filenames):
     """
     Takes path to multiple .h5 files and returns h5 datasets as list
     """
-    h5_files = [h5.File(filename) for filename in filenames]
+    h5_files = [h5.File(f'sample_files/{filename}') for filename in filenames]
     return h5_files
 
 
@@ -43,7 +43,7 @@ def current_frequency_amplitude(h5_block):
     frame = {
         'current' : np.asarray(h5_block['entry']['data0']['current']),
         'frequency' : np.asarray(h5_block['entry']['data0']['frequency']),
-        'amplitude' : 20*np.log10(np.asarray(h5_block['entry']['data0']['amplitude']).T)
+        'amplitude' : np.asarray(h5_block['entry']['data0']['amplitude']).T
     }
     
     return frame
@@ -57,23 +57,17 @@ def current_frequency_mesh(current_axes,frequency_axes):
     return current_mesh, frequency_mesh
 
 
-def contour_plot(current, frequency, amplitude, maximum_y = 8):
+def contour_plot(current, frequency, amplitude, v_min = -2.5, v_max = 0.7):
     """
     Returns contour plot of Frequency, Current and Amplitude
     """
     params = {'mathtext.default': 'regular' }          
     plt.rcParams.update(params)
-    current_mesh, frequency_mesh = current_frequency_mesh(current, frequency)
-
-    plt.pcolormesh(current_mesh,frequency_mesh/1e9, amplitude, vmin=-25, vmax=-10)
-
+    plt.pcolormesh(current * (1/14), frequency/1e9, amplitude, vmin=v_min, vmax=v_max)
     cbar = plt.colorbar()
     cbar.set_label("$S_{11}$ (Normalised Amplitude)")
-    plt.xlabel('Current /A')
+    plt.xlabel('$\\mu_o$ $H_0$ /T')
     plt.ylabel('Frequency /GHz')
-    plt.ylim(ymax=maximum_y)
-    plt.xlim()
-
     plt.savefig('saved_plots/Testing_plot.png', transparent=False)
 
 
@@ -84,16 +78,26 @@ def background_separation(sample_amplitude, background_amplitude):
     return ((sample_amplitude * background_amplitude) / (sample_amplitude[0] * background_amplitude[0]))
 
 
-def functionality(*filenames, background_removal = False):
-    h5_files = read_and_scan(*filenames)
-    sample = current_frequency_amplitude(h5_files[0])
+def functionality(*filenames, vmin, vmax, background_removal):
+    """
+    Takes in a filename, reads the corresponding h5 file.
+    Assigns current, frequency and amplitude to their own arrays.
+    Depending on whether background removal is desired, contour plot is created accordingly.
+    Inputs-
+    filenames: paths to .h5 files, type = string
+    background_removal: Toggles whether background removal is desired, type = bool
+    """
+    
+    h5_files = read_and_scan(*filenames)# calling own function for reading h5 files
+    sample = current_frequency_amplitude(h5_files[0]) #only sample file, not background
+
+    #separating components into separate arrays
     current, frequency, sample_amplitude = sample['current'], sample['frequency'], sample['amplitude']
-
-    background_amplitude = current_frequency_amplitude(h5_files[1])['amplitude']
-
+    
     if background_removal:
+        background_amplitude = current_frequency_amplitude(h5_files[1])['amplitude']
         foreground_amplitude = background_separation(sample_amplitude, background_amplitude)
-        contour_plot(current, frequency, normalise_array(foreground_amplitude))
+        contour_plot(current, frequency, normalise_array(foreground_amplitude), vmin, vmax)
     
     else:
         normalised_amplitude = normalise_array(sample_amplitude)
@@ -103,11 +107,40 @@ def functionality(*filenames, background_removal = False):
 
 
 def parse_arguments():
+    """
+    This allows file paths and other parameters to be passed through the command line
+    """
     parser = argparse.ArgumentParser(description = 'Run FMR Data Analysis')
-    parser.add_argument('-sample_path', metavar='sample_path', type = str, help = 'The path to sample .h5 file')
-    parser.add_argument('-background_path', metavar='background_path', type = str, help = 'The path to background .h5 file', default='sample_files/no_sample.h5')
-    parser.add_argument('-background_removal', action='store_true', help = 'Toggles removal of background amplitudes')
     
+    parser.add_argument(
+        '-sample_name',
+        metavar='sample_path',
+        type = str,
+        help = 'The path to sample .h5 file')
+    
+    parser.add_argument(
+        '-background_name',
+        metavar='background_path',
+        type = str,
+        help = 'The path to background .h5 file',
+        default='no_sample.h5')
+
+    parser.add_argument(
+        '-vmin',
+        type = float,
+        default = '-2.5',
+        help = 'The minimum of the amplitude scale'
+    )
+
+    parser.add_argument(
+        '-vmax',
+        type = float,
+        default = '0.7',
+        help = 'The maximum of the amplitude scale'
+    )
+    
+    parser.add_argument('--background_removal', default=False, action='store_true')
+
     return parser.parse_args()
 
 
@@ -115,10 +148,11 @@ def parse_arguments():
 def main():
     args = parse_arguments()
     file_paths = {
-        'sample' : args.sample_path,
-        'background' : args.background_path
+        'sample' : args.sample_name,
+        'background' : args.background_name
     }
-    functionality(*file_paths.values()) #args.background_removal)
+    
+    functionality(*file_paths.values(), vmin = args.vmin, vmax = args.vmax, background_removal = args.background_removal)
 
 
 
