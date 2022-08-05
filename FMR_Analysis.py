@@ -48,12 +48,15 @@ def contour_plot(current, frequency, amplitude, v_min = -2.5, v_max = 0.7, plot_
     """
     params = {'mathtext.default': 'regular' }          
     plt.rcParams.update(params)
-    plt.pcolormesh(current * (1/14), frequency/1e9, amplitude, vmin=v_min, vmax=v_max)
+    plt.pcolormesh(current * (1/14), frequency/1e9, amplitude, vmin=v_min, vmax=v_max, cmap = 'magma_r')
     cbar = plt.colorbar()
-    cbar.set_label("$S_{11}$ (Normalised Amplitude)")
-    plt.xlabel('$\\mu_o$ $H_0$ /T')
-    plt.ylabel('Frequency /GHz')
-    plt.savefig(f'saved_plots/{plot_filename}.png', transparent=False)
+    plt.title('Sample 3', fontsize=15)
+    cbar.set_label("$S_{11}$ (Normalised Amplitude)", fontsize=15)
+    plt.xlabel('$\\mu_o$ $H_0$ (T)', fontsize = 15)
+    plt.xticks(fontsize=15)
+    plt.ylabel('Frequency (GHz)', fontsize = 15)
+    plt.yticks(fontsize=15)
+    plt.savefig(f'saved_plots/{plot_filename}.png',bbox_inches = 'tight',  transparent=False)
 
 
 def background_separation(sample_amplitude, background_amplitude):
@@ -109,7 +112,7 @@ def parse_arguments():
         '-background_name',
         type = str,
         help = 'The path to background .h5 file',
-        default='no_sample.h5'
+        default='upside down sample 1 to 15GHz -4 to 4 A.h5'
     )
 
     parser.add_argument(
