@@ -1,8 +1,4 @@
 import qkit
-from qkit.measure import samples_class
-import numpy as np
-from qkit.measure.spectroscopy import spectroscopy
-
 
 
 def qkit_setup():
@@ -15,6 +11,12 @@ def qkit_setup():
     qkit.cfg['user'] = 'Rair'
 
     return
+
+
+from qkit.measure import samples_class # awful but need to review qkit setup structure
+import numpy as np
+from qkit.measure.spectroscopy import spectroscopy
+
 
 
 def instrument_setup():
