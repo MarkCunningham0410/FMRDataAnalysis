@@ -50,7 +50,7 @@ def contour_plot(current, frequency, amplitude, v_min = -2.5, v_max = 0.7, plot_
     plt.rcParams.update(params)
     plt.pcolormesh(current * (1/14), frequency/1e9, amplitude, vmin=v_min, vmax=v_max, cmap = 'magma_r')
     cbar = plt.colorbar()
-    plt.title('Sample 3', fontsize=15)
+    plt.title(f'{plot_filename}', fontsize=15)
     cbar.set_label("$S_{11}$ (Normalised Amplitude)", fontsize=15)
     plt.xlabel('$\\mu_o$ $H_0$ (T)', fontsize = 15)
     plt.xticks(fontsize=15)
